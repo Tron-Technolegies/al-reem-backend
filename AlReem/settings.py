@@ -29,8 +29,10 @@ DEBUG = True
 ALLOWED_HOSTS = ['alreem-7r91.onrender.com',
                  'http://localhost:5173']
 
-CORS_ALLOWED_ORIGINS =  ['alreem-7r91.onrender.com',
-                        'http://localhost:5173']
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:5173",
+    "https://alreem-7r91.onrender.com",
+]
 
 CORS_ALLOW_CREDENTIALS = True
 
