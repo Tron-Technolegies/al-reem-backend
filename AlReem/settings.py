@@ -29,6 +29,10 @@ DEBUG = True
 ALLOWED_HOSTS = ['alreem-7r91.onrender.com',
                  'http://localhost:5173']
 
+CORS_ALLOWED_ORIGINS =  ['alreem-7r91.onrender.com',
+                        'http://localhost:5173']
+
+CORS_ALLOW_CREDENTIALS = True
 
 # Application definition
 
@@ -60,7 +64,7 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
-CORS_ALLOW_ALL_ORIGINS = True
+CORS_ALLOW_ALL_ORIGINS = False
 ROOT_URLCONF = 'AlReem.urls'
 
 TEMPLATES = [
