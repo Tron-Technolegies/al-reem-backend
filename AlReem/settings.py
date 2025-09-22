@@ -26,7 +26,8 @@ SECRET_KEY = 'django-insecure-u@4(%_nv9cy@c$=a78lc5*6br+qq14b0c!_pek9fyegpbgkjzz
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['alreem-7r91.onrender.com']
+ALLOWED_HOSTS = ['alreem-7r91.onrender.com',
+                 'http://localhost:5173']
 
 
 # Application definition
@@ -43,11 +44,13 @@ INSTALLED_APPS = [
     'members',
     'attendance',
     'payments',
-    'dashboard'
+    'dashboard',
+    'corsheaders'
  
 ]
 
 MIDDLEWARE = [
+    'corsheaders.middleware.CorsMiddleware'
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -56,7 +59,7 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
-
+CORS_ALLOW_ALL_ORIGINS = True
 ROOT_URLCONF = 'AlReem.urls'
 
 TEMPLATES = [
