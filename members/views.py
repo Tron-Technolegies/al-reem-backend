@@ -8,63 +8,6 @@ from .models import Member, Plan
 from django.views.decorators.csrf import csrf_exempt
 
 from .models import TrainerStaff
-
-
-# Create your views here.
-# def add_member(request):
-#     if request.method == 'POST':
-#         data = request.POST
-
-#         name = data.get('name')
-#         phone = data.get('phone')
-#         email = data.get('email')
-#         age = data.get('age')
-#         weight = data.get('weight')
-#         blood_group = data.get('blood_group')
-#         joining = data.get('joining_day')
-#         # expiry = data.get('expiry') 
-#         status = data.get('status')
-#         # plan = data.get('plan')
-#         location = data.get('location')
-#         profession = data.get('profession')
-#         fee = data.get('fee') 
-#         due = data.get('due')
-#         leave= data.get('leave')
-#         rejoin = data.get('rejoin')
-#         plan = Plan.objects.get(id=data.get('plan'))
-#         plan_days= plan.duration_days
-
-#         joining_date = datetime.strptime(joining, "%Y-%m-%d").date()
-#         expiry = joining_date + timedelta(days=plan_days)
-
-#         if leave:
-#             leave_date = datetime.strptime(leave, "%Y-%m-%d").date() if leave else None
-#         if rejoin:
-#             rejoin_date = datetime.strptime(rejoin, "%Y-%m-%d").date() if rejoin else None
-#         paused_days = (rejoin_date - leave_date).days
-#         expire_date = expiry + timedelta(days=paused_days)
-#         member = Member.objects.create(
-#             name=name,
-#             phone=phone,
-#             email=email,
-#             age=age,
-#             weight=weight,
-#             blood_group=blood_group,
-#             joining_date=joining_date,
-#             expire_date=expire_date,
-#             status=status,
-#             plan_type=plan,
-#             location=location,
-#             profession=profession,
-#             total_fee=fee,
-#             due_amount=due,
-#             leave=leave_date,
-#             rejoin=rejoin_date
-#         )
-
-#         return JsonResponse({'message': 'Successfully added new member', 'member_id': member.id}, status=200)
-
-#     return JsonResponse({'message': 'Invalid request method'}, status=405)
 from reportlab.lib.pagesizes import A4
 from reportlab.lib import colors
 from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
@@ -72,7 +15,6 @@ from reportlab.lib.styles import getSampleStyleSheet
 
 from payments.models import Invoice   # import your Invoice model
 
-from payments.models import Invoice  # import Invoice model
 
 @csrf_exempt
 def add_member(request):
@@ -90,7 +32,7 @@ def add_member(request):
         location = data.get('location')
         profession = data.get('profession')
         fee = data.get('fee')
-        paid = data.get('paid')  # ✅ New field for paid amount
+        paid = data.get('paid')  
         due = data.get('due')
         leave = data.get('leave')
         rejoin = data.get('rejoin')
@@ -109,7 +51,6 @@ def add_member(request):
 
         expire_date = expiry + timedelta(days=paused_days)
 
-        # 1️⃣ Save member
         member = Member.objects.create(
             name=name,
             phone=phone,
@@ -129,7 +70,7 @@ def add_member(request):
             rejoin_date=rejoin_date
         )
 
-        # 2️⃣ Create Invoice
+
         invoice_number = f"INV-{member.id:05d}"  # Example format: INV-00001
         invoice = Invoice.objects.create(
             member=member,
@@ -140,7 +81,7 @@ def add_member(request):
             payment_method=data.get("payment_method", "cash")
         )
 
-        # 3️⃣ Generate PDF path
+
         receipt_dir = os.path.join(settings.MEDIA_ROOT, "receipts")
         os.makedirs(receipt_dir, exist_ok=True)
         file_path = os.path.join(receipt_dir, f"receipt_{invoice.invoice_number}.pdf")
@@ -152,7 +93,7 @@ def add_member(request):
         elements.append(Paragraph("Membership Receipt", styles["Title"]))
         elements.append(Spacer(1, 12))
 
-        # 4️⃣ Table with invoice no
+      
         data_table = [
             ["Field", "Details"],
             ["Invoice No", invoice.invoice_number],
@@ -339,7 +280,7 @@ def view_members(request):
             'joining_date',
             'expire_date',
             'status',
-            'plan_type',   # changed this
+            'plan_type',  
             'location',
             'profession',
             'total_fee',
@@ -388,6 +329,71 @@ def add_plan(request):
 
     return JsonResponse({"error": "Invalid request method"}, status=405)
 
+def view_plans(request):
+    if request.method == "GET":
+        plans = [
+            {
+                "id": plan.id,
+                "name": plan.name,
+                "duration_days": plan.duration_days,
+                "price": str(plan.price) if plan.price else None
+            }
+            for plan in Plan.objects.all()
+        ]
+        return JsonResponse({"plans": plans})
+    return JsonResponse({"error": "Invalid request method"}, status=405)
+
+
+@csrf_exempt
+def edit_plan(request, plan_id):
+    try:
+        plan = Plan.objects.get(id=plan_id)
+    except Plan.DoesNotExist:
+        return JsonResponse({"error": "Plan not found"}, status=404)
+
+    if request.method == "GET":
+        # Return plan details
+        return JsonResponse({
+            "id": plan.id,
+            "name": plan.name,
+            "duration_days": plan.duration_days,
+            "price": str(plan.price) if plan.price else None
+        })
+
+    elif request.method == "POST":
+        try:
+            data = json.loads(request.body.decode("utf-8"))
+            plan.name = data.get("name", plan.name)
+            plan.duration_days = data.get("duration_days", plan.duration_days)
+            plan.price = data.get("price", plan.price)
+            plan.save()
+            return JsonResponse({
+                "message": "Plan updated successfully",
+                "plan": {
+                    "id": plan.id,
+                    "name": plan.name,
+                    "duration_days": plan.duration_days,
+                    "price": str(plan.price) if plan.price else None
+                }
+            })
+        except Exception as e:
+            return JsonResponse({"error": str(e)}, status=500)
+
+    else:
+        return JsonResponse({"error": "Invalid request method"}, status=405)
+# Delete a plan
+@csrf_exempt
+def delete_plan(request, plan_id):
+    if request.method == "DELETE":
+        try:
+            plan = Plan.objects.get(id=plan_id)
+            plan.delete()
+            return JsonResponse({"message": "Plan deleted successfully"}, status=200)
+        except Plan.DoesNotExist:
+            return JsonResponse({"error": "Plan not found"}, status=404)
+        except Exception as e:
+            return JsonResponse({"error": str(e)}, status=500)
+    return JsonResponse({"error": "Invalid request method"}, status=405)
 @csrf_exempt
 def add_trainer_staff(request):
     if request.method == "POST":
