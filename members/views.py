@@ -149,9 +149,9 @@ from django.conf import settings
 from .models import Member, Plan
 
 @csrf_exempt
-def update_member(request, pk):
+def update_member(request, id):
     if request.method == "POST" or request.method == "PUT":
-        member = get_object_or_404(Member, pk=pk)
+        member = get_object_or_404(Member, id=id)
 
         data = request.POST
 
@@ -255,10 +255,10 @@ from .models import Member
 import json
 
 @csrf_exempt
-def delete_member(request, member_id):
+def delete_member(request, id):
     if request.method == 'DELETE':
         try:
-            member = Member.objects.get(id=member_id)
+            member = Member.objects.get(id=id)
             member.delete()
             return JsonResponse({'message': 'Member deleted successfully'}, status=200)
         except Member.DoesNotExist:
