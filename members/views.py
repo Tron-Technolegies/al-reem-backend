@@ -150,12 +150,35 @@ from .models import Member, Plan
 
 @csrf_exempt
 def update_member(request, id):
-    if request.method == "POST" or request.method == "PUT":
-        member = get_object_or_404(Member, id=id)
+    member = get_object_or_404(Member, id=id)
 
+    # ✅ GET request → fetch member details
+    if request.method == "GET":
+        return JsonResponse({
+            "id": member.id,
+            "name": member.name,
+            "phone": member.phone,
+            "email": member.email,
+            "age": member.age,
+            "weight": member.weight,
+            "blood_group": member.blood_group,
+            "status": member.status,
+            "location": member.location,
+            "profession": member.profession,
+            "total_fee": member.total_fee,
+            "due_amount": member.due_amount,
+            "plan": member.plan_type.id if member.plan_type else None,
+            "joining_date": member.joining_date.strftime("%Y-%m-%d") if member.joining_date else None,
+            "expire_date": member.expire_date.strftime("%Y-%m-%d") if member.expire_date else None,
+            "leave_date": member.leave_date.strftime("%Y-%m-%d") if member.leave_date else None,
+            "rejoin_date": member.rejoin_date.strftime("%Y-%m-%d") if member.rejoin_date else None,
+        }, status=200)
+
+    # ✅ POST request → update member details
+    elif request.method == "POST":
         data = request.POST
 
-        # Update basic fields
+        # Update fields
         member.name = data.get("name", member.name)
         member.phone = data.get("phone", member.phone)
         member.email = data.get("email", member.email)
@@ -168,17 +191,17 @@ def update_member(request, id):
         member.total_fee = data.get("fee", member.total_fee)
         member.due_amount = data.get("due", member.due_amount)
 
-        # Update plan if provided
+        # Plan
         plan_id = data.get("plan")
         if plan_id:
             member.plan_type = Plan.objects.get(id=plan_id)
 
-        # Handle joining date
+        # Joining date
         joining = data.get("joining_day")
         if joining:
             member.joining_date = datetime.strptime(joining, "%Y-%m-%d").date()
 
-        # Handle leave & rejoin
+        # Leave & Rejoin
         leave = data.get("leave")
         rejoin = data.get("rejoin")
         paused_days = 0
@@ -190,14 +213,14 @@ def update_member(request, id):
             member.leave_date = None
             member.rejoin_date = None
 
-        # Recalculate expiry
+        # Expiry date calculation
         if member.joining_date and member.plan_type:
             expiry = member.joining_date + timedelta(days=member.plan_type.duration_days)
             member.expire_date = expiry + timedelta(days=paused_days)
 
         member.save()
 
-        # 🔹 Regenerate PDF
+        # 🔹 Generate updated PDF
         receipt_dir = os.path.join(settings.MEDIA_ROOT, "receipts")
         os.makedirs(receipt_dir, exist_ok=True)
         file_path = os.path.join(receipt_dir, f"receipt_{member.id}.pdf")
@@ -248,7 +271,6 @@ def update_member(request, id):
         }, status=200)
 
     return JsonResponse({"message": "Invalid request method"}, status=405)
-
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from .models import Member
@@ -484,38 +506,57 @@ def view_single_trainer_staff(request, id):
 
 
 
-
-
 @csrf_exempt
 def edit_trainer_staff(request, id):
-    if request.method == "POST" or request.method == "PUT":
-        trainer_staff = get_object_or_404(TrainerStaff, id=id)
+    trainer_staff = get_object_or_404(TrainerStaff, id=id)
 
-        # Update fields only if provided
-        trainer_staff.user = request.POST.get("user", trainer_staff.user)
-        trainer_staff.phone_number = request.POST.get("phone_number", trainer_staff.phone_number)
-        trainer_staff.email = request.POST.get("email", trainer_staff.email)
-        trainer_staff.location = request.POST.get("location", trainer_staff.location)
-        trainer_staff.trainer_or_staff = request.POST.get("trainer_or_staff", trainer_staff.trainer_or_staff)
-        trainer_staff.age = request.POST.get("age", trainer_staff.age)
-        trainer_staff.weight = request.POST.get("weight", trainer_staff.weight)
-        trainer_staff.blood_group = request.POST.get("blood_group", trainer_staff.blood_group)
+    # ✅ GET request → return details
+    if request.method == "GET":
+        return JsonResponse({
+            "id": trainer_staff.id,
+            "user": str(trainer_staff.user),  # make sure it's serializable
+            "phone_number": trainer_staff.phone_number,
+            "email": trainer_staff.email,
+            "location": trainer_staff.location,
+            "trainer_or_staff": trainer_staff.trainer_or_staff,
+            "age": trainer_staff.age,
+            "weight": trainer_staff.weight,
+            "blood_group": trainer_staff.blood_group,
+            "profile_picture": trainer_staff.profile_picture.url if trainer_staff.profile_picture else None,
+        }, status=200)
+
+
+    elif request.method == "POST":
+        data = request.POST
+
+        trainer_staff.user = data.get("user", trainer_staff.user)
+        trainer_staff.phone_number = data.get("phone_number", trainer_staff.phone_number)
+        trainer_staff.email = data.get("email", trainer_staff.email)
+        trainer_staff.location = data.get("location", trainer_staff.location)
+        trainer_staff.trainer_or_staff = data.get("trainer_or_staff", trainer_staff.trainer_or_staff)
+        trainer_staff.age = data.get("age", trainer_staff.age)
+        trainer_staff.weight = data.get("weight", trainer_staff.weight)
+        trainer_staff.blood_group = data.get("blood_group", trainer_staff.blood_group)
 
         if "profile_picture" in request.FILES:
             trainer_staff.profile_picture = request.FILES["profile_picture"]
 
         trainer_staff.save()
 
-        return JsonResponse({"status": "success", "message": "Trainer/Staff updated successfully!"})
+        return JsonResponse({
+            "status": "success",
+            "message": "Trainer/Staff updated successfully!",
+            "id": trainer_staff.id
+        }, status=200)
 
-    return JsonResponse({"status": "failed", "message": "Invalid request method"})
+    return JsonResponse({"status": "failed", "message": "Invalid request method"}, status=405)
 
 
 @csrf_exempt
-def delete_trainer_staff(request, pk):
-    if request.method == "DELETE" or request.method == "POST":
-        trainer_staff = get_object_or_404(TrainerStaff, pk=pk)
+def delete_trainer_staff(request, id):
+    if request.method == "POST" or request.method == "DELETE":
+        trainer_staff = get_object_or_404(TrainerStaff, id=id)
         trainer_staff.delete()
-        return JsonResponse({"status": "success", "message": "Trainer/Staff deleted successfully!"})
+        return JsonResponse({"status": "success", "message": "Trainer/Staff deleted successfully!"}, status=200)
 
-    return JsonResponse({"status": "failed", "message": "Invalid request method"})
+    return JsonResponse({"status": "failed", "message": "Invalid request method"}, status=405)
