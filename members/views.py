@@ -15,6 +15,34 @@ from reportlab.lib.styles import getSampleStyleSheet
 
 from payments.models import Invoice   # import your Invoice model
 
+from django.contrib.auth import authenticate, login, logout
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+
+@csrf_exempt
+def admin_login(request):
+    if request.method == "POST":
+        username = request.POST.get("username")
+        password = request.POST.get("password")
+
+        user = authenticate(request, username=username, password=password)
+
+        if user is not None and user.is_staff:  
+            login(request, user)
+            return JsonResponse({"status": "success", "message": "Login successful!"}, status=200)
+        else:
+            return JsonResponse({"status": "failed", "message": "Invalid credentials or not authorized!"}, status=401)
+
+    return JsonResponse({"status": "failed", "message": "Invalid request method"}, status=405)
+
+
+@csrf_exempt
+def admin_logout(request):
+    if request.method == "POST":
+        logout(request)
+        return JsonResponse({"status": "success", "message": "Logged out successfully!"}, status=200)
+
+    return JsonResponse({"status": "failed", "message": "Invalid request method"}, status=405)
 
 @csrf_exempt
 def add_member(request):
