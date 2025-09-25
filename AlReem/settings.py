@@ -44,13 +44,10 @@ INSTALLED_APPS = [
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
-    'django.contrib.staticfiles',
-    'AlReemApp',
-    'users',
+    'django.contrib.staticfiles',   
     'members',
     'attendance',
-    'payments',
-    'dashboard',
+    'payments', 
     'corsheaders'
  
 ]

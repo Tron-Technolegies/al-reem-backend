@@ -175,130 +175,189 @@ from reportlab.lib.styles import getSampleStyleSheet
 import os
 from django.conf import settings
 from .models import Member, Plan
+from django.views.decorators.csrf import csrf_exempt
+from django.http import JsonResponse
+from django.shortcuts import get_object_or_404
+from datetime import datetime, timedelta
+import os, traceback
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
+from reportlab.lib.pagesizes import A4
+from reportlab.lib import colors
+from reportlab.lib.styles import getSampleStyleSheet
+from django.conf import settings
+
+from django.views.decorators.csrf import csrf_exempt
+from django.http import JsonResponse
+from django.shortcuts import get_object_or_404
+from datetime import datetime, timedelta
+import os, traceback
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
+from reportlab.lib.pagesizes import A4
+from reportlab.lib import colors
+from reportlab.lib.styles import getSampleStyleSheet
+from django.conf import settings
+from .models import Member, Plan
+from django.shortcuts import get_object_or_404
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+from datetime import datetime, timedelta
+from reportlab.lib.pagesizes import A4
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
+from reportlab.lib.styles import getSampleStyleSheet
+from reportlab.lib import colors
+import os, traceback
+from django.conf import settings
+from .models import Member, Plan
 
 @csrf_exempt
 def update_member(request, id):
     member = get_object_or_404(Member, id=id)
 
-    # ✅ GET request → fetch member details
+    # ----------------- GET Request ----------------- #
     if request.method == "GET":
-        return JsonResponse({
-            "id": member.id,
-            "name": member.name,
-            "phone": member.phone,
-            "email": member.email,
-            "age": member.age,
-            "weight": member.weight,
-            "blood_group": member.blood_group,
-            "status": member.status,
-            "location": member.location,
-            "profession": member.profession,
-            "total_fee": member.total_fee,
-            "due_amount": member.due_amount,
-            "plan": member.plan_type.id if member.plan_type else None,
-            "joining_date": member.joining_date.strftime("%Y-%m-%d") if member.joining_date else None,
-            "expire_date": member.expire_date.strftime("%Y-%m-%d") if member.expire_date else None,
-            "leave_date": member.leave_date.strftime("%Y-%m-%d") if member.leave_date else None,
-            "rejoin_date": member.rejoin_date.strftime("%Y-%m-%d") if member.rejoin_date else None,
-        }, status=200)
+        try:
+            response_data = {
+                "id": member.id,
+                "name": member.name,
+                "phone": member.phone,
+                "email": member.email,
+                "age": member.age,
+                "weight": float(member.weight) if member.weight is not None else None,
+                "blood_group": member.blood_group,
+                "status": member.status,
+                "location": member.location,
+                "profession": member.profession,
+                "total_fee": member.total_fee,
+                "due_amount": member.due_amount,
+                "plan": {
+                    "id": member.plan_type.id,
+                    "name": member.plan_type.name,
+                    "duration_days": member.plan_type.duration_days
+                } if member.plan_type else None,
+                "joining_date": member.joining_date.strftime("%Y-%m-%d") if member.joining_date else None,
+                "expire_date": member.expire_date.strftime("%Y-%m-%d") if member.expire_date else None,
+                "leave_date": member.leave_date.strftime("%Y-%m-%d") if member.leave_date else None,
+                "rejoin_date": member.rejoin_date.strftime("%Y-%m-%d") if member.rejoin_date else None,
+            }
+            return JsonResponse(response_data, status=200)
+        except Exception as e:
+            print("❌ ERROR in GET update_member:", str(e))
+            print(traceback.format_exc())
+            return JsonResponse({"error": str(e)}, status=500)
 
-    # ✅ POST request → update member details
+    # ----------------- POST Request ----------------- #
     elif request.method == "POST":
-        data = request.POST
+        try:
+            data = request.POST
 
-        # Update fields
-        member.name = data.get("name", member.name)
-        member.phone = data.get("phone", member.phone)
-        member.email = data.get("email", member.email)
-        member.age = data.get("age", member.age)
-        member.weight = data.get("weight", member.weight)
-        member.blood_group = data.get("blood_group", member.blood_group)
-        member.status = data.get("status", member.status)
-        member.location = data.get("location", member.location)
-        member.profession = data.get("profession", member.profession)
-        member.total_fee = data.get("fee", member.total_fee)
-        member.due_amount = data.get("due", member.due_amount)
+            # Update text fields
+            member.name = data.get("name", member.name)
+            member.phone = data.get("phone", member.phone)
+            member.email = data.get("email", member.email)
+            member.status = data.get("status", member.status)
+            member.location = data.get("location", member.location)
+            member.profession = data.get("profession", member.profession)
 
-        # Plan
-        plan_id = data.get("plan")
-        if plan_id:
-            member.plan_type = Plan.objects.get(id=plan_id)
+            # Numeric fields
+            if data.get("age"): member.age = int(data["age"])
+            if data.get("weight"): member.weight = float(data["weight"])
+            if data.get("fee"): member.total_fee = float(data["fee"])
+            if data.get("due"): member.due_amount = float(data["due"])
 
-        # Joining date
-        joining = data.get("joining_day")
-        if joining:
-            member.joining_date = datetime.strptime(joining, "%Y-%m-%d").date()
+            # Plan
+            plan_id = data.get("plan")
+            if plan_id:
+                try:
+                    member.plan_type = Plan.objects.get(id=int(plan_id))
+                except Plan.DoesNotExist:
+                    return JsonResponse({"error": "Invalid plan id"}, status=400)
+            else:
+                member.plan_type = None
 
-        # Leave & Rejoin
-        leave = data.get("leave")
-        rejoin = data.get("rejoin")
-        paused_days = 0
-        if leave and rejoin:
-            member.leave_date = datetime.strptime(leave, "%Y-%m-%d").date()
-            member.rejoin_date = datetime.strptime(rejoin, "%Y-%m-%d").date()
-            paused_days = (member.rejoin_date - member.leave_date).days
-        else:
-            member.leave_date = None
-            member.rejoin_date = None
+            # Joining date
+            joining = data.get("joining_date") or data.get("joining_day")
+            if joining:
+                member.joining_date = datetime.strptime(joining, "%Y-%m-%d").date()
 
-        # Expiry date calculation
-        if member.joining_date and member.plan_type:
-            expiry = member.joining_date + timedelta(days=member.plan_type.duration_days)
-            member.expire_date = expiry + timedelta(days=paused_days)
+            # Leave & Rejoin
+            leave = data.get("leave")
+            rejoin = data.get("rejoin")
+            paused_days = 0
+            if leave and rejoin:
+                member.leave_date = datetime.strptime(leave, "%Y-%m-%d").date()
+                member.rejoin_date = datetime.strptime(rejoin, "%Y-%m-%d").date()
+                paused_days = (member.rejoin_date - member.leave_date).days
+            else:
+                member.leave_date = None
+                member.rejoin_date = None
 
-        member.save()
+            # Expiry date
+            if member.joining_date and member.plan_type:
+                expiry = member.joining_date + timedelta(days=member.plan_type.duration_days)
+                member.expire_date = expiry + timedelta(days=paused_days)
+            else:
+                member.expire_date = None
 
-        # 🔹 Generate updated PDF
-        receipt_dir = os.path.join(settings.MEDIA_ROOT, "receipts")
-        os.makedirs(receipt_dir, exist_ok=True)
-        file_path = os.path.join(receipt_dir, f"receipt_{member.id}.pdf")
+            member.save()
 
-        doc = SimpleDocTemplate(file_path, pagesize=A4)
-        elements = []
-        styles = getSampleStyleSheet()
+            # ---------------- PDF Generation ---------------- #
+            receipt_dir = os.path.join(settings.MEDIA_ROOT, "receipts")
+            os.makedirs(receipt_dir, exist_ok=True)
+            file_path = os.path.join(receipt_dir, f"receipt_{member.id}.pdf")
 
-        elements.append(Paragraph("Membership Receipt (Updated)", styles["Title"]))
-        elements.append(Spacer(1, 12))
+            doc = SimpleDocTemplate(file_path, pagesize=A4)
+            elements = []
+            styles = getSampleStyleSheet()
 
-        data_table = [
-            ["Field", "Details"],
-            ["Name", member.name],
-            ["Phone", member.phone],
-            ["Email", member.email],
-            ["Plan", f"{member.plan_type.name} ({member.plan_type.duration_days} days)"] if member.plan_type else "",
-            ["Joining Date", member.joining_date.strftime("%Y-%m-%d") if member.joining_date else ""],
-            ["Expiry Date", member.expire_date.strftime("%Y-%m-%d") if member.expire_date else ""],
-            ["Total Fee", str(member.total_fee)],
-            ["Due Amount", str(member.due_amount)],
-        ]
+            elements.append(Paragraph("Membership Receipt (Updated)", styles["Title"]))
+            elements.append(Spacer(1, 12))
 
-        table = Table(data_table, colWidths=[120, 300])
-        table.setStyle(TableStyle([
-            ("BACKGROUND", (0, 0), (-1, 0), colors.lightblue),
-            ("TEXTCOLOR", (0, 0), (-1, 0), colors.whitesmoke),
-            ("ALIGN", (0, 0), (-1, -1), "LEFT"),
-            ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
-            ("BOTTOMPADDING", (0, 0), (-1, 0), 12),
-            ("BACKGROUND", (0, 1), (-1, -1), colors.beige),
-            ("GRID", (0, 0), (-1, -1), 0.5, colors.grey),
-        ]))
+            data_table = [
+                ["Field", "Details"],
+                ["Name", member.name],
+                ["Phone", member.phone],
+                ["Email", member.email],
+                ["Plan", f"{member.plan_type.name} ({member.plan_type.duration_days} days)" if member.plan_type else ""],
+                ["Joining Date", member.joining_date.strftime("%Y-%m-%d") if member.joining_date else ""],
+                ["Expiry Date", member.expire_date.strftime("%Y-%m-%d") if member.expire_date else ""],
+                ["Total Fee", str(member.total_fee)],
+                ["Due Amount", str(member.due_amount)],
+            ]
 
-        elements.append(table)
-        elements.append(Spacer(1, 24))
-        elements.append(Paragraph("Thank you for staying with us!", styles['Heading3']))
+            table = Table(data_table, colWidths=[120, 300])
+            table.setStyle(TableStyle([
+                ("BACKGROUND", (0, 0), (-1, 0), colors.lightblue),
+                ("TEXTCOLOR", (0, 0), (-1, 0), colors.whitesmoke),
+                ("ALIGN", (0, 0), (-1, -1), "LEFT"),
+                ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+                ("BOTTOMPADDING", (0, 0), (-1, 0), 12),
+                ("BACKGROUND", (0, 1), (-1, -1), colors.beige),
+                ("GRID", (0, 0), (-1, -1), 0.5, colors.grey),
+            ]))
 
-        doc.build(elements)
+            elements.append(table)
+            elements.append(Spacer(1, 24))
+            elements.append(Paragraph("Thank you for staying with us!", styles['Heading3']))
 
-        pdf_url = f"{settings.MEDIA_URL}receipts/receipt_{member.id}.pdf"
+            doc.build(elements)
 
-        return JsonResponse({
-            "message": "Member updated successfully",
-            "member_id": member.id,
-            "expiry": member.expire_date.strftime("%Y-%m-%d") if member.expire_date else None,
-            "receipt_url": pdf_url
-        }, status=200)
+            pdf_url = f"{settings.MEDIA_URL}receipts/receipt_{member.id}.pdf"
 
-    return JsonResponse({"message": "Invalid request method"}, status=405)
+            return JsonResponse({
+                "message": "Member updated successfully",
+                "member_id": member.id,
+                "expiry": member.expire_date.strftime("%Y-%m-%d") if member.expire_date else None,
+                "receipt_url": pdf_url
+            }, status=200)
+
+        except Exception as e:
+            print("❌ ERROR in POST update_member:", str(e))
+            print(traceback.format_exc())
+            return JsonResponse({"error": str(e)}, status=500)
+
+    return JsonResponse({"status": "failed", "message": "Invalid request method"}, status=405)
+
+
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from .models import Member
@@ -538,11 +597,10 @@ def view_single_trainer_staff(request, id):
 def edit_trainer_staff(request, id):
     trainer_staff = get_object_or_404(TrainerStaff, id=id)
 
-    # ✅ GET request → return details
     if request.method == "GET":
         return JsonResponse({
             "id": trainer_staff.id,
-            "user": str(trainer_staff.user),  # make sure it's serializable
+            "user": trainer_staff.user,
             "phone_number": trainer_staff.phone_number,
             "email": trainer_staff.email,
             "location": trainer_staff.location,
@@ -553,7 +611,7 @@ def edit_trainer_staff(request, id):
             "profile_picture": trainer_staff.profile_picture.url if trainer_staff.profile_picture else None,
         }, status=200)
 
-
+ 
     elif request.method == "POST":
         data = request.POST
 
@@ -562,10 +620,16 @@ def edit_trainer_staff(request, id):
         trainer_staff.email = data.get("email", trainer_staff.email)
         trainer_staff.location = data.get("location", trainer_staff.location)
         trainer_staff.trainer_or_staff = data.get("trainer_or_staff", trainer_staff.trainer_or_staff)
-        trainer_staff.age = data.get("age", trainer_staff.age)
-        trainer_staff.weight = data.get("weight", trainer_staff.weight)
+
+        # Cast integers properly
+        if data.get("age"):
+            trainer_staff.age = int(data.get("age"))
+        if data.get("weight"):
+            trainer_staff.weight = int(data.get("weight"))
+
         trainer_staff.blood_group = data.get("blood_group", trainer_staff.blood_group)
 
+        # Handle profile picture
         if "profile_picture" in request.FILES:
             trainer_staff.profile_picture = request.FILES["profile_picture"]
 
@@ -578,7 +642,6 @@ def edit_trainer_staff(request, id):
         }, status=200)
 
     return JsonResponse({"status": "failed", "message": "Invalid request method"}, status=405)
-
 
 @csrf_exempt
 def delete_trainer_staff(request, id):

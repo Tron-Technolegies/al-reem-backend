@@ -19,7 +19,7 @@ class Member(models.Model):
     blood_group = models.CharField(max_length=5, blank=True, null=True)
     expire_date = models.DateField(blank=True, null=True)
     status = models.CharField(max_length=20, default="Active")
-    plan_type = models.CharField(max_length=50)
+    plan_type = models.ForeignKey(Plan, on_delete=models.SET_NULL, null=True, blank=True)
     location = models.CharField(max_length=100, blank=True, null=True)
     profession = models.CharField(max_length=100, blank=True, null=True)
     total_fee = models.IntegerField(default=0)  
