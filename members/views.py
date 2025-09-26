@@ -454,9 +454,9 @@ def view_plans(request):
 
 
 @csrf_exempt
-def edit_plan(request, plan_id):
+def edit_plan(request, id):
     try:
-        plan = Plan.objects.get(id=plan_id)
+        plan = Plan.objects.get(id=id)
     except Plan.DoesNotExist:
         return JsonResponse({"error": "Plan not found"}, status=404)
 
