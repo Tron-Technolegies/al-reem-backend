@@ -570,9 +570,36 @@ def view_all_trainers_staff(request):
     return JsonResponse({"status": "failed", "message": "Invalid request method"})
 
 
+# def view_single_trainer_staff(request, id):
+#     if request.method == "GET":
+#         trainer_staff = get_object_or_404(TrainerStaff, id=id)
+
+#         data = {
+#             "id": trainer_staff.id,
+#             "user": trainer_staff.user,
+#             "phone_number": trainer_staff.phone_number,
+#             "email": trainer_staff.email,
+#             "location": trainer_staff.location,
+#             "trainer_or_staff": trainer_staff.trainer_or_staff,
+#             "age": trainer_staff.age,
+#             "weight": trainer_staff.weight,
+#             "blood_group": trainer_staff.blood_group,
+#             "profile_picture": request.build_absolute_uri(trainer_staff.profile_picture.url) if trainer_staff.profile_picture else None
+            
+#         }
+
+#         return JsonResponse({"status": "success", "data": data})
+
+#     return JsonResponse({"status": "failed", "message": "Invalid request method"})
+
 def view_single_trainer_staff(request, id):
     if request.method == "GET":
         trainer_staff = get_object_or_404(TrainerStaff, id=id)
+
+        # Debug print
+        print("Profile Picture field value:", trainer_staff.profile_picture)  
+        if trainer_staff.profile_picture:
+            print("Profile Picture URL:", trainer_staff.profile_picture.url)
 
         data = {
             "id": trainer_staff.id,
@@ -584,13 +611,12 @@ def view_single_trainer_staff(request, id):
             "age": trainer_staff.age,
             "weight": trainer_staff.weight,
             "blood_group": trainer_staff.blood_group,
-            "profile_picture": request.build_absolute_url(trainer_staff.profile_picture.url) if trainer_staff.profile_picture else None
+            "profile_picture": request.build_absolute_uri(trainer_staff.profile_picture.url) if trainer_staff.profile_picture else None
         }
 
         return JsonResponse({"status": "success", "data": data})
 
     return JsonResponse({"status": "failed", "message": "Invalid request method"})
-
 
 
 @csrf_exempt
