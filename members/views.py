@@ -584,7 +584,7 @@ def view_single_trainer_staff(request, id):
             "age": trainer_staff.age,
             "weight": trainer_staff.weight,
             "blood_group": trainer_staff.blood_group,
-            "profile_picture": request.build_absolute_uri(trainer_staff.profile_picture.url) if trainer_staff.profile_picture else None
+            "profile_picture": request.build_absolute_url(trainer_staff.profile_picture.url) if trainer_staff.profile_picture else None
         }
 
         return JsonResponse({"status": "success", "data": data})
