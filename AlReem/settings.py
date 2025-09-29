@@ -27,7 +27,7 @@ SECRET_KEY = 'django-insecure-u@4(%_nv9cy@c$=a78lc5*6br+qq14b0c!_pek9fyegpbgkjzz
 DEBUG = True
 
 ALLOWED_HOSTS = [
-    'alreem-7r91.onrender.com',
+    'al-reem-backend.onrender.com',
     'localhost',
     '127.0.0.1',
     'alreemgym.com',
@@ -35,11 +35,11 @@ ALLOWED_HOSTS = [
 ]
 
 CORS_ALLOWED_ORIGINS = [
-    "http://localhost:5173",
-    "https://alreem-7r91.onrender.com",
-    "https://alreemgym.com",
-    "https://statuesque-zabaione-0ec173.netlify.app",
+    "http://localhost:5173",                         # local frontend
+    "https://statuesque-zabaione-0ec173.netlify.app", # Netlify frontend
+    "https://alreemgym.com",                          # production frontend
 ]
+
 
 CORS_ALLOW_CREDENTIALS = True
 
