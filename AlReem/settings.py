@@ -27,11 +27,13 @@ SECRET_KEY = 'django-insecure-u@4(%_nv9cy@c$=a78lc5*6br+qq14b0c!_pek9fyegpbgkjzz
 DEBUG = True
 
 ALLOWED_HOSTS = ['alreem-7r91.onrender.com',
-                 'http://localhost:5173']
+                 'http://localhost:5173',
+                 "http://alreemgym.com"]
 
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173",
     "https://alreem-7r91.onrender.com",
+    "http://alreemgym.com"
 ]
 
 CORS_ALLOW_CREDENTIALS = True
