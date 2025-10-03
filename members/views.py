@@ -88,7 +88,7 @@ def admin_logout(request):
     return JsonResponse({"status": "failed", "message": "Invalid request method"}, status=405)
 
 @csrf_exempt
-def add_member(request):
+def add_member(request): #it is already done
     if request.method == 'POST':
         data = request.POST
 
