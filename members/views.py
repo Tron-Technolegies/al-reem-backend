@@ -4,7 +4,9 @@ import os
 from django.conf import settings
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, render
-from .models import Member, Plan
+
+from members.decorators import branch_admin_required
+from .models import Branch, BranchAdminProfile, Member, Plan
 from django.views.decorators.csrf import csrf_exempt
 
 from .models import TrainerStaff
@@ -19,21 +21,62 @@ from django.contrib.auth import authenticate, login, logout
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 
+
+import jwt
+from datetime import datetime, timedelta
+from django.conf import settings
+from django.contrib.auth import authenticate
+from django.views.decorators.csrf import csrf_exempt
+from django.http import JsonResponse
+from .models import BranchAdminProfile
+
 @csrf_exempt
 def admin_login(request):
-    if request.method == "POST":
-        username = request.POST.get("username")
-        password = request.POST.get("password")
+    if request.method != "POST":
+        return JsonResponse({"status": "failed", "message": "Invalid request method"}, status=405)
 
-        user = authenticate(request, username=username, password=password)
+    username = request.POST.get("username")
+    password = request.POST.get("password")
 
-        if user is not None and user.is_staff:  
-            login(request, user)
-            return JsonResponse({"status": "success", "message": "Login successful!"}, status=200)
-        else:
-            return JsonResponse({"status": "failed", "message": "Invalid credentials or not authorized!"}, status=401)
+    if not username or not password:
+        return JsonResponse({"status": "failed", "message": "Username and password required"}, status=400)
 
-    return JsonResponse({"status": "failed", "message": "Invalid request method"}, status=405)
+    user = authenticate(request, username=username, password=password)
+
+    if user is None:
+        return JsonResponse({"status": "failed", "message": "Invalid credentials!"}, status=401)
+
+    # Determine role and branch
+    if user.is_superuser:
+        role = "superuser"
+        branch_id = None
+    elif hasattr(user, "branchadminprofile"):
+        if not user.branchadminprofile.branch:
+            return JsonResponse(
+                {"status": "failed", "message": "Branch admin has no assigned branch"},
+                status=500
+            )
+        role = "branch_admin"
+        branch_id = user.branchadminprofile.branch.id    else:
+        return JsonResponse({"status": "failed", "message": "Not authorized!"}, status=401)
+
+    # Generate JWT token
+    payload = {
+        "user_id": user.id,
+        "username": user.username,
+        "role": role,
+        "branch_id": branch_id,
+        "exp": datetime.utcnow() + timedelta(hours=8)  # token valid for 8 hours
+    }
+    token = jwt.encode(payload, settings.JWT_SECRET, algorithm="HS256")
+
+    return JsonResponse({
+        "status": "success",
+        "message": "Login successful!",
+        "token": token,
+        "role": role,
+        "branch_id": branch_id
+    })
 
 
 @csrf_exempt
@@ -164,14 +207,49 @@ def add_member(request):
 
     return JsonResponse({'message': 'Invalid request method'}, status=405)
 
+
+
+@branch_admin_required
+def pending_members(request):
+    if request.method != 'GET':
+        return JsonResponse({'message': 'Invalid request method'}, status=405)
+
+    # Filter members based on role
+    if request.role == "superuser":
+        members = Member.objects.filter(due_amount__gt=0)
+    else:  # branch_admin
+        members = Member.objects.filter(branch_id=request.branch_id, due_amount__gt=0)
+
+    data = list(members.values(
+        'id', 'name', 'phone', 'email', 'due_amount', 'expire_date', 'branch_id'
+    ))
+
+    return JsonResponse(data, safe=False, status=200)
+
+from datetime import date
+@branch_admin_required
+def expired_members(request):
+    if request.method != 'GET':
+        return JsonResponse({'message': 'Invalid request method'}, status=405)
+
+    today = date.today()
+
+    if request.role == "superuser":
+        members = Member.objects.filter(expire_date__lt=today)
+    else:  # branch_admin
+        members = Member.objects.filter(branch_id=request.branch_id, expire_date__lt=today)
+
+    data = list(members.values(
+        'id', 'name', 'phone', 'email', 'due_amount', 'expire_date', 'branch_id'
+    ))
+
+    return JsonResponse(data, safe=False, status=200)
+
 from django.views.decorators.csrf import csrf_exempt
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404
 from datetime import datetime, timedelta
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
-from reportlab.lib import colors
-from reportlab.lib.pagesizes import A4
-from reportlab.lib.styles import getSampleStyleSheet
+
 import os
 from django.conf import settings
 from .models import Member, Plan
@@ -180,10 +258,7 @@ from django.http import JsonResponse
 from django.shortcuts import get_object_or_404
 from datetime import datetime, timedelta
 import os, traceback
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
-from reportlab.lib.pagesizes import A4
-from reportlab.lib import colors
-from reportlab.lib.styles import getSampleStyleSheet
+
 from django.conf import settings
 
 from django.views.decorators.csrf import csrf_exempt
@@ -193,6 +268,7 @@ from datetime import datetime, timedelta
 import os, traceback
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
 from reportlab.lib.pagesizes import A4
+
 from reportlab.lib import colors
 from reportlab.lib.styles import getSampleStyleSheet
 from django.conf import settings
@@ -201,10 +277,7 @@ from django.shortcuts import get_object_or_404
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from datetime import datetime, timedelta
-from reportlab.lib.pagesizes import A4
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
-from reportlab.lib.styles import getSampleStyleSheet
-from reportlab.lib import colors
+
 import os, traceback
 from django.conf import settings
 from .models import Member, Plan
@@ -375,31 +448,55 @@ def delete_member(request, id):
 
     return JsonResponse({'message': 'Invalid request method'}, status=405)
 
+@branch_admin_required
 @csrf_exempt
+@branch_admin_required  # Make sure you use the decorator
 def view_members(request):
-    if request.method == 'GET':
-        members = Member.objects.all().values(
-            'id',
-            'name',
-            'phone',
-            'email',
-            'age',
-            'weight',
-            'blood_group',
-            'joining_date',
-            'expire_date',
-            'status',
-            'plan_type',  
-            'location',
-            'profession',
-            'total_fee',
-            'due_amount',
-            'leave_date',
-            'rejoin_date'
-        )
-        return JsonResponse(list(members), safe=False, status=200)
+    if request.method != 'GET':
+        return JsonResponse({'message': 'Invalid request method'}, status=405)
 
-    return JsonResponse({'message': 'Invalid request method'}, status=405)
+    # Filter members based on role
+    if request.role == "superuser":
+        members = Member.objects.all().values(
+            'id', 'name', 'phone', 'email', 'age', 'weight', 'blood_group',
+            'joining_date', 'expire_date', 'status', 'plan_type',  
+            'location', 'profession', 'total_fee', 'due_amount',
+            'leave_date', 'rejoin_date'
+        )
+    else:  # branch_admin
+        members = Member.objects.filter(branch_id=request.branch_id).values(
+            'id', 'name', 'phone', 'email', 'age', 'weight', 'blood_group',
+            'joining_date', 'expire_date', 'status', 'plan_type',  
+            'location', 'profession', 'total_fee', 'due_amount',
+            'leave_date', 'rejoin_date'
+        )
+
+    return JsonResponse(list(members), safe=False, status=200)
+
+# def view_members(request):
+#     if request.method == 'GET':
+#         members = Member.objects.all().values(
+#             'id',
+#             'name',
+#             'phone',
+#             'email',
+#             'age',
+#             'weight',
+#             'blood_group',
+#             'joining_date',
+#             'expire_date',
+#             'status',
+#             'plan_type',  
+#             'location',
+#             'profession',
+#             'total_fee',
+#             'due_amount',
+#             'leave_date',
+#             'rejoin_date'
+#         )
+#         return JsonResponse(list(members), safe=False, status=200)
+
+#     return JsonResponse({'message': 'Invalid request method'}, status=405)
 
 
 @csrf_exempt
@@ -677,3 +774,131 @@ def delete_trainer_staff(request, id):
         return JsonResponse({"status": "success", "message": "Trainer/Staff deleted successfully!"}, status=200)
 
     return JsonResponse({"status": "failed", "message": "Invalid request method"}, status=405)
+
+@csrf_exempt
+def add_branch(request):
+    if request.method == 'POST':
+        branch_name = request.POST.get('bname')
+        branch_location = request.POST.get('blocation')
+        if branch_name and branch_location:
+            branch = Branch.objects.create(
+                name= branch_name,
+                location = branch_location
+            )
+            return JsonResponse({'status':'Successfully added branch!',
+                                 'id':branch.id})
+        else:
+            return JsonResponse({'status': 'Branch name and location are required.'}, status=400)
+
+    return JsonResponse({'status': 'Invalid request method'}, status=405)
+        
+
+
+def view_branches(request):
+    if request.method == 'GET':
+        branches = Branch.objects.all()
+        branches_list =[]
+        for i in branches:
+            branches_list.append(
+                {
+                'id': i.id,
+                'name':i.name,
+                'location': i.location
+                }
+            )
+        return JsonResponse({
+            'status':'success!',
+            'branches':branches_list,
+        
+        })
+    return JsonResponse({'status': 'Invalid request method'}, status=405)
+
+
+@csrf_exempt
+def delete_branch(request, id):
+    try:
+        branch = Branch.objects.get(id=id)
+    except Branch.DoesNotExist:
+        return JsonResponse({'status': 'Branch not found'}, status=404)
+
+    if request.method == 'POST':
+        branch.delete()
+        return JsonResponse({'status': 'Branch deleted successfully'})
+    return JsonResponse({'status': 'Invalid request method'}, status=405)
+
+
+@csrf_exempt
+def edit_branch(request, id):
+    try:
+        branch = Branch.objects.get(id=id)
+    except Branch.DoesNotExist:
+        return JsonResponse({'status': 'Branch not found'}, status=404)
+
+    if request.method == 'GET':
+        # Return current branch data
+        return JsonResponse({
+            'status': 'success',
+            'id': branch.id,
+            'name': branch.name,
+            'location': branch.location
+        })
+
+    elif request.method == 'POST':
+        # Update branch data
+        branch_name = request.POST.get('bname', branch.name)
+        branch_location = request.POST.get('blocation', branch.location)
+
+        branch.name = branch_name
+        branch.location = branch_location
+        branch.save()
+
+        return JsonResponse({
+            'status': 'Branch updated successfully',
+            'id': branch.id,
+            'name': branch.name,
+            'location': branch.location
+        })
+
+    return JsonResponse({'status': 'Invalid request method'}, status=405)
+
+from django.contrib.auth.models import User
+@csrf_exempt
+def add_branch_admin(request):
+    if request.method == 'POST':
+        
+        username = request.POST.get('username')
+        email = request.POST.get('email')
+        password = request.POST.get('password')
+        branch_id = request.POST.get('branch_id')
+        phone = request.POST.get('phone') 
+
+        # Validate required fields
+        if not username or not email or not password or not branch_id:
+            return JsonResponse({'status': 'All fields are required'}, status=400)
+
+        # Check if username already exists
+        if User.objects.filter(username=username).exists():
+            return JsonResponse({'status': 'Username already exists'}, status=400)
+
+        # Create user
+        user = User.objects.create_user(username=username, email=email, password=password)
+
+        # Get branch
+        try:
+            branch = Branch.objects.get(id=branch_id)
+        except Branch.DoesNotExist:
+            return JsonResponse({'status': 'Branch not found'}, status=404)
+
+        # Create BranchAdminProfile
+        BranchAdminProfile.objects.create(user=user, branch=branch, phone=phone)
+
+        return JsonResponse({
+            'status': 'Branch admin created successfully',
+            'user_id': user.id,
+            'username': user.username,
+            'branch_id': branch.id,
+            'branch_name': branch.name
+        })
+
+    return JsonResponse({'status': 'Invalid request method'}, status=405)
+    return JsonResponse({'status': 'Invalid request method'}, status=405)
