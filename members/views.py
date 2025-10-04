@@ -57,7 +57,8 @@ def admin_login(request):
                 status=500
             )
         role = "branch_admin"
-        branch_id = user.branchadminprofile.branch.id    else:
+        branch_id = user.branchadminprofile.branch.id    
+    else:
         return JsonResponse({"status": "failed", "message": "Not authorized!"}, status=401)
 
     # Generate JWT token
