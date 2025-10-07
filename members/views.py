@@ -30,6 +30,62 @@ from django.views.decorators.csrf import csrf_exempt
 from django.http import JsonResponse
 from .models import BranchAdminProfile
 
+# @csrf_exempt
+# def admin_login(request):
+#     if request.method != "POST":
+#         return JsonResponse({"status": "failed", "message": "Invalid request method"}, status=405)
+
+#     username = request.POST.get("username")
+#     password = request.POST.get("password")
+
+#     if not username or not password:
+#         return JsonResponse({"status": "failed", "message": "Username and password required"}, status=400)
+
+#     user = authenticate(request, username=username, password=password)
+
+#     if user is None:
+#         return JsonResponse({"status": "failed", "message": "Invalid credentials!"}, status=401)
+
+#     # Determine role and branch
+#     if user.is_superuser:
+#         role = "superuser"
+#         branch_id = None
+#     elif hasattr(user, "branchadminprofile"):
+#         if not user.branchadminprofile.branch:
+#             return JsonResponse(
+#                 {"status": "failed", "message": "Branch admin has no assigned branch"},
+#                 status=500
+#             )
+#         role = "branch_admin"
+#         branch_id = user.branchadminprofile.branch.id    
+#     else:
+#         return JsonResponse({"status": "failed", "message": "Not authorized!"}, status=401)
+
+#     # Generate JWT token
+#     payload = {
+#         "user_id": user.id,
+#         "username": user.username,
+#         "role": role,
+#         "branch_id": branch_id,
+#         "exp": datetime.utcnow() + timedelta(hours=8)  # token valid for 8 hours
+#     }
+#     token = jwt.encode(payload, settings.JWT_SECRET, algorithm="HS256")
+
+#     return JsonResponse({
+#         "status": "success",
+#         "message": "Login successful!",
+#         "token": token,
+#         "role": role,
+#         "branch_id": branch_id
+#     })
+
+from django.views.decorators.csrf import csrf_exempt
+from django.http import JsonResponse
+from django.contrib.auth import authenticate
+from django.conf import settings
+import jwt
+from datetime import datetime, timedelta
+
 @csrf_exempt
 def admin_login(request):
     if request.method != "POST":
@@ -67,17 +123,30 @@ def admin_login(request):
         "username": user.username,
         "role": role,
         "branch_id": branch_id,
-        "exp": datetime.utcnow() + timedelta(hours=8)  # token valid for 8 hours
+        "exp": datetime.utcnow() + timedelta(hours=8)
     }
     token = jwt.encode(payload, settings.JWT_SECRET, algorithm="HS256")
 
-    return JsonResponse({
+    # Prepare response
+    response = JsonResponse({
         "status": "success",
         "message": "Login successful!",
-        "token": token,
         "role": role,
         "branch_id": branch_id
     })
+
+    # Store token in cookie (secure method)
+    response.set_cookie(
+        key="jwt",
+        value=token,
+        httponly=True,      # JS cannot read it
+        secure=True,        # set to True if using HTTPS
+        samesite="Lax",     # change to 'None' if frontend is on different domain
+        max_age=8 * 60 * 60 # 8 hours
+    )
+
+    return response
+
 
 
 @csrf_exempt
@@ -92,7 +161,8 @@ def admin_logout(request):
 def add_member(request):
     if request.method == 'POST':
         data = request.POST
-
+        branch_id = data.get('branch') 
+        branch = Branch.objects.get(id=branch_id) if branch_id else None
         name = data.get('name')
         phone = data.get('phone')
         email = data.get('email')
@@ -124,6 +194,7 @@ def add_member(request):
         expire_date = expiry + timedelta(days=paused_days)
 
         member = Member.objects.create(
+            branch=branch,
             name=name,
             phone=phone,
             email=email,
@@ -449,7 +520,7 @@ def delete_member(request, id):
 
     return JsonResponse({'message': 'Invalid request method'}, status=405)
 
-@branch_admin_required
+
 @csrf_exempt
 @branch_admin_required  # Make sure you use the decorator
 def view_members(request):
@@ -473,31 +544,6 @@ def view_members(request):
         )
 
     return JsonResponse(list(members), safe=False, status=200)
-
-# def view_members(request):
-#     if request.method == 'GET':
-#         members = Member.objects.all().values(
-#             'id',
-#             'name',
-#             'phone',
-#             'email',
-#             'age',
-#             'weight',
-#             'blood_group',
-#             'joining_date',
-#             'expire_date',
-#             'status',
-#             'plan_type',  
-#             'location',
-#             'profession',
-#             'total_fee',
-#             'due_amount',
-#             'leave_date',
-#             'rejoin_date'
-#         )
-#         return JsonResponse(list(members), safe=False, status=200)
-
-#     return JsonResponse({'message': 'Invalid request method'}, status=405)
 
 
 @csrf_exempt
