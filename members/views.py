@@ -141,7 +141,7 @@ def admin_login(request):
         value=token,
         httponly=True,      # JS cannot read it
         secure=True,        # set to True if using HTTPS
-        samesite="Lax",     # change to 'None' if frontend is on different domain
+        # samesite="Lax",     # change to 'None' if frontend is on different domain
         max_age=8 * 60 * 60 # 8 hours
     )
 
