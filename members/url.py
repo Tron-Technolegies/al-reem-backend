@@ -4,6 +4,8 @@ from . import views
 
 
 urlpatterns = [
+    path('pending_members', views.pending_members, name='pending_members'), #done
+    path('expired_members', views.expired_members, name='expired_members'), #done
     path('admin_login', views.admin_login, name='admin_login'),           #done
     path('admin_logout', views.admin_logout, name='admin_logout'),        #done
     path('add_member', views.add_member, name='add_member'),              #done
@@ -18,6 +20,11 @@ urlpatterns = [
     path('view_all_trainers_staff', views.view_all_trainers_staff, name='view_all_trainers_staff'), #done without photo
     path('view_single_trainer_staff/<int:id>', views.view_single_trainer_staff, name='view_single_trainer_staff'),  #done
     path('edit_trainer_staff/<int:id>', views.edit_trainer_staff, name='edit_trainer_staff'), #done
-    path('delete_trainer_staff/<int:id>', views.delete_trainer_staff, name='delete_trainer_staff') #done
+    path('delete_trainer_staff/<int:id>', views.delete_trainer_staff, name='delete_trainer_staff'), #done
+    path('add_branch', views.add_branch, name='add_branch'), #done
+    path('view-branches', views.view_branches, name='view-branches'), #done
+    path('edit-branch/<int:id>/', views.edit_branch, name='edit-branch'), #done
+    path('delete-branch/<int:id>/', views.delete_branch, name='delete-branch'), #done
+    path('add-branch-admin', views.add_branch_admin, name='add-branch-admin'), #done
 
 ]

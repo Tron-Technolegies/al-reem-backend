@@ -8,7 +8,7 @@ if defined _OLD_CODEPAGE (
     "%SystemRoot%\System32\chcp.com" 65001 > nul
 )
 
-set VIRTUAL_ENV=C:\Users\yadhu\OneDrive\Desktop\ALREEM\venv1
+set VIRTUAL_ENV=C:\Users\TRON\OneDrive\Desktop\ALREEMNEW\al-reem-backend\venv1
 
 if not defined PROMPT set PROMPT=$P$G
 
