@@ -522,7 +522,7 @@ def delete_member(request, id):
 
 
 @csrf_exempt
-@branch_admin_required  # Make sure you use the decorator
+@branch_admin_required  
 def view_members(request):
     if request.method != 'GET':
         return JsonResponse({'message': 'Invalid request method'}, status=405)

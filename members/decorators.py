@@ -7,26 +7,24 @@ from django.http import JsonResponse
 def branch_admin_required(view_func):
     @wraps(view_func)
     def wrapper(request, *args, **kwargs):
-        auth_header = request.COOKIES.get("Authorization")
-        if not auth_header:
+        token = request.COOKIES.get("jwt")  # ✅ read from cookie
+
+        if not token:
             return JsonResponse({"status": "failed", "message": "Missing token"}, status=401)
 
         try:
-            # Expect header in format: "Bearer <token>"
-            token = auth_header.split(" ")[1]
             payload = jwt.decode(token, settings.JWT_SECRET, algorithms=["HS256"])
-        except (IndexError, jwt.ExpiredSignatureError, jwt.DecodeError):
-            return JsonResponse({"status": "failed", "message": "Invalid or expired token"}, status=401)
+        except jwt.ExpiredSignatureError:
+            return JsonResponse({"status": "failed", "message": "Token expired"}, status=401)
+        except jwt.InvalidTokenError:
+            return JsonResponse({"status": "failed", "message": "Invalid token"}, status=401)
 
-        # Attach user info to request
         request.user_id = payload.get("user_id")
         request.role = payload.get("role")
         request.branch_id = payload.get("branch_id")
 
-        # Optionally restrict access to branch_admin only
         if request.role not in ["branch_admin", "superuser"]:
             return JsonResponse({"status": "failed", "message": "Not authorized"}, status=403)
 
         return view_func(request, *args, **kwargs)
-
     return wrapper
