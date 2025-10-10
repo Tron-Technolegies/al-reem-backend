@@ -38,10 +38,16 @@ CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173",                         # local frontend
     "https://statuesque-zabaione-0ec173.netlify.app", # Netlify frontend
     "https://alreemgym.com",                          # production frontend
+     "http://localhost:3000",
 ]
 
 
 CORS_ALLOW_CREDENTIALS = True
+
+CSRF_TRUSTED_ORIGINS = [
+    "http://localhost:3000",
+]
+
 
 # Application definition
 
@@ -71,6 +77,8 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 CORS_ALLOW_ALL_ORIGINS = False
+
+
 ROOT_URLCONF = 'AlReem.urls'
 
 TEMPLATES = [

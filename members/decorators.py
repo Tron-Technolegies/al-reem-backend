@@ -7,7 +7,7 @@ from django.http import JsonResponse
 def branch_admin_required(view_func):
     @wraps(view_func)
     def wrapper(request, *args, **kwargs):
-        auth_header = request.headers.get("Authorization")
+        auth_header = request.COOKIES.get("Authorization")
         if not auth_header:
             return JsonResponse({"status": "failed", "message": "Missing token"}, status=401)
 
