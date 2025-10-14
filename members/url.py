@@ -26,6 +26,6 @@ urlpatterns = [
     path('edit-branch/<int:id>/', views.edit_branch, name='edit-branch'), #done
     path('delete-branch/<int:id>/', views.delete_branch, name='delete-branch'), #done
     path('add-branch-admin', views.add_branch_admin, name='add-branch-admin'), #done
-    path(' test_cookie', views. test_cookie, name='test_cookie')
+  
 
 ]
