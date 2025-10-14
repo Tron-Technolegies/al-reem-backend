@@ -7,7 +7,7 @@ from django.http import JsonResponse
 def branch_admin_required(view_func):
     @wraps(view_func)
     def wrapper(request, *args, **kwargs):
-        token = request.COOKIES.get("jwt")  # ✅ read from cookie
+        token = request.COOKIES.get("jwt") 
 
         if not token:
             return JsonResponse({"status": "failed", "message": "Missing token"}, status=401)
