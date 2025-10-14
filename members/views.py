@@ -5,7 +5,7 @@ from django.conf import settings
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, render
 
-from members.decorators import branch_admin_required
+from members.decorators import branch_admin_required, login_required_custom
 from .models import Branch, BranchAdminProfile, Member, Plan
 from django.views.decorators.csrf import csrf_exempt
 
@@ -147,20 +147,21 @@ def admin_login(request):
 
     return response
 
-@csrf_exempt
-def test_cookie(request):
-    print("COOKIES:", request.COOKIES)
-    return JsonResponse({"cookies": request.COOKIES})
-
 
 @csrf_exempt
 def admin_logout(request):
     if request.method == "POST":
-        logout(request)
-        return JsonResponse({"status": "success", "message": "Logged out successfully!"}, status=200)
+        logout(request)  # Just clears Django session if any
+        response = JsonResponse({
+            "status": "success",
+            "message": "Logged out successfully!"
+        })
+        response.delete_cookie('jwt')  # Remove token from browser
+        return response
 
     return JsonResponse({"status": "failed", "message": "Invalid request method"}, status=405)
 
+@login_required_custom
 @csrf_exempt
 def add_member(request):
     if request.method == 'POST':
@@ -285,6 +286,7 @@ def add_member(request):
 
 
 
+@login_required_custom
 @branch_admin_required
 def pending_members(request):
     if request.method != 'GET':
@@ -303,6 +305,8 @@ def pending_members(request):
     return JsonResponse(data, safe=False, status=200)
 
 from datetime import date
+
+@login_required_custom
 @branch_admin_required
 def expired_members(request):
     if request.method != 'GET':
@@ -357,7 +361,7 @@ from datetime import datetime, timedelta
 import os, traceback
 from django.conf import settings
 from .models import Member, Plan
-
+@login_required_custom
 @csrf_exempt
 def update_member(request, id):
     member = get_object_or_404(Member, id=id)
@@ -511,7 +515,7 @@ from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from .models import Member
 import json
-
+@login_required_custom
 @csrf_exempt
 def delete_member(request, id):
     if request.method == 'DELETE':
@@ -524,7 +528,7 @@ def delete_member(request, id):
 
     return JsonResponse({'message': 'Invalid request method'}, status=405)
 
-
+@login_required_custom
 @csrf_exempt
 @branch_admin_required  
 def view_members(request):
@@ -554,7 +558,7 @@ def view_members(request):
 
     return JsonResponse(list(members), safe=False, status=200)
 
-
+@login_required_custom
 @csrf_exempt
 def add_plan(request):
     if request.method == "POST":
@@ -590,7 +594,7 @@ def add_plan(request):
             return JsonResponse({"error": str(e)}, status=500)
 
     return JsonResponse({"error": "Invalid request method"}, status=405)
-
+@login_required_custom
 def view_plans(request):
     if request.method == "GET":
         plans = [
@@ -605,7 +609,7 @@ def view_plans(request):
         return JsonResponse({"plans": plans})
     return JsonResponse({"error": "Invalid request method"}, status=405)
 
-
+@login_required_custom
 @csrf_exempt
 def edit_plan(request, id):
     try:
@@ -643,7 +647,9 @@ def edit_plan(request, id):
 
     else:
         return JsonResponse({"error": "Invalid request method"}, status=405)
+
 # Delete a plan
+@login_required_custom
 @csrf_exempt
 def delete_plan(request, plan_id):
     if request.method == "DELETE":
@@ -656,6 +662,8 @@ def delete_plan(request, plan_id):
         except Exception as e:
             return JsonResponse({"error": str(e)}, status=500)
     return JsonResponse({"error": "Invalid request method"}, status=405)
+
+@login_required_custom
 @csrf_exempt
 def add_trainer_staff(request):
     if request.method == "POST":
@@ -694,7 +702,7 @@ def add_trainer_staff(request):
     return JsonResponse({"status": "failed", "message": "Invalid request method"})
 
 
-
+@login_required_custom
 def view_all_trainers_staff(request):
     if request.method == "GET":
         trainers_staff = TrainerStaff.objects.all().values(
@@ -744,7 +752,7 @@ def view_all_trainers_staff(request):
 #         return JsonResponse({"status": "success", "data": data})
 
 #     return JsonResponse({"status": "failed", "message": "Invalid request method"})
-
+@login_required_custom
 def view_single_trainer_staff(request, id):
     if request.method == "GET":
         trainer_staff = get_object_or_404(TrainerStaff, id=id)
@@ -771,7 +779,7 @@ def view_single_trainer_staff(request, id):
 
     return JsonResponse({"status": "failed", "message": "Invalid request method"})
 
-
+@login_required_custom
 @csrf_exempt
 def edit_trainer_staff(request, id):
     trainer_staff = get_object_or_404(TrainerStaff, id=id)
@@ -822,6 +830,8 @@ def edit_trainer_staff(request, id):
 
     return JsonResponse({"status": "failed", "message": "Invalid request method"}, status=405)
 
+
+@login_required_custom
 @csrf_exempt
 def delete_trainer_staff(request, id):
     if request.method == "POST" or request.method == "DELETE":
@@ -831,6 +841,8 @@ def delete_trainer_staff(request, id):
 
     return JsonResponse({"status": "failed", "message": "Invalid request method"}, status=405)
 
+
+@login_required_custom
 @csrf_exempt
 def add_branch(request):
     if request.method == 'POST':
@@ -849,7 +861,7 @@ def add_branch(request):
     return JsonResponse({'status': 'Invalid request method'}, status=405)
         
 
-
+@login_required_custom
 def view_branches(request):
     if request.method == 'GET':
         branches = Branch.objects.all()
@@ -869,7 +881,7 @@ def view_branches(request):
         })
     return JsonResponse({'status': 'Invalid request method'}, status=405)
 
-
+@login_required_custom
 @csrf_exempt
 def delete_branch(request, id):
     try:
@@ -882,7 +894,7 @@ def delete_branch(request, id):
         return JsonResponse({'status': 'Branch deleted successfully'})
     return JsonResponse({'status': 'Invalid request method'}, status=405)
 
-
+@login_required_custom
 @csrf_exempt
 def edit_branch(request, id):
     try:
@@ -917,7 +929,10 @@ def edit_branch(request, id):
 
     return JsonResponse({'status': 'Invalid request method'}, status=405)
 
+
+
 from django.contrib.auth.models import User
+@login_required_custom
 @csrf_exempt
 def add_branch_admin(request):
     if request.method == 'POST':
