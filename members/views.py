@@ -537,14 +537,19 @@ def view_members(request):
             'id', 'name', 'phone', 'email', 'age', 'weight', 'blood_group',
             'joining_date', 'expire_date', 'status', 'plan_type',  
             'location', 'profession', 'total_fee', 'due_amount',
-            'leave_date', 'rejoin_date'
+            'leave_date', 'rejoin_date',
+            'branch__id',     # Branch ID
+        'branch__name' 
         )
     else:  # branch_admin
         members = Member.objects.filter(branch_id=request.branch_id).values(
             'id', 'name', 'phone', 'email', 'age', 'weight', 'blood_group',
-            'joining_date', 'expire_date', 'status', 'plan_type',  
+            'joining_date', 'expire_date', 'status',   
             'location', 'profession', 'total_fee', 'due_amount',
-            'leave_date', 'rejoin_date'
+            'leave_date', 'rejoin_date',
+            'branch__id',
+            'branch__name',
+            'plan_type__name'
         )
 
     return JsonResponse(list(members), safe=False, status=200)
