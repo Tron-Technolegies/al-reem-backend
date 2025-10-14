@@ -6,6 +6,8 @@ from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, render
 
 from members.decorators import branch_admin_required, login_required_custom
+from django.views.decorators.cache import never_cache
+
 from .models import Branch, BranchAdminProfile, Member, Plan
 from django.views.decorators.csrf import csrf_exempt
 
@@ -160,7 +162,7 @@ def admin_logout(request):
         return response
 
     return JsonResponse({"status": "failed", "message": "Invalid request method"}, status=405)
-
+@never_cache
 @login_required_custom
 @csrf_exempt
 def add_member(request):
@@ -285,7 +287,7 @@ def add_member(request):
     return JsonResponse({'message': 'Invalid request method'}, status=405)
 
 
-
+@never_cache
 @login_required_custom
 @branch_admin_required
 def pending_members(request):
@@ -305,7 +307,7 @@ def pending_members(request):
     return JsonResponse(data, safe=False, status=200)
 
 from datetime import date
-
+@never_cache
 @login_required_custom
 @branch_admin_required
 def expired_members(request):
@@ -361,6 +363,8 @@ from datetime import datetime, timedelta
 import os, traceback
 from django.conf import settings
 from .models import Member, Plan
+
+@never_cache
 @login_required_custom
 @csrf_exempt
 def update_member(request, id):
@@ -515,6 +519,7 @@ from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from .models import Member
 import json
+@never_cache
 @login_required_custom
 @csrf_exempt
 def delete_member(request, id):
@@ -527,7 +532,7 @@ def delete_member(request, id):
             return JsonResponse({'error': 'Member not found'}, status=404)
 
     return JsonResponse({'message': 'Invalid request method'}, status=405)
-
+@never_cache
 @login_required_custom
 @csrf_exempt
 @branch_admin_required  
@@ -557,7 +562,7 @@ def view_members(request):
         )
 
     return JsonResponse(list(members), safe=False, status=200)
-
+@never_cache
 @login_required_custom
 @csrf_exempt
 def add_plan(request):
@@ -594,6 +599,7 @@ def add_plan(request):
             return JsonResponse({"error": str(e)}, status=500)
 
     return JsonResponse({"error": "Invalid request method"}, status=405)
+@never_cache
 @login_required_custom
 def view_plans(request):
     if request.method == "GET":
@@ -608,7 +614,7 @@ def view_plans(request):
         ]
         return JsonResponse({"plans": plans})
     return JsonResponse({"error": "Invalid request method"}, status=405)
-
+@never_cache
 @login_required_custom
 @csrf_exempt
 def edit_plan(request, id):
@@ -649,6 +655,7 @@ def edit_plan(request, id):
         return JsonResponse({"error": "Invalid request method"}, status=405)
 
 # Delete a plan
+@never_cache
 @login_required_custom
 @csrf_exempt
 def delete_plan(request, plan_id):
@@ -662,7 +669,7 @@ def delete_plan(request, plan_id):
         except Exception as e:
             return JsonResponse({"error": str(e)}, status=500)
     return JsonResponse({"error": "Invalid request method"}, status=405)
-
+@never_cache
 @login_required_custom
 @csrf_exempt
 def add_trainer_staff(request):
@@ -701,7 +708,7 @@ def add_trainer_staff(request):
 
     return JsonResponse({"status": "failed", "message": "Invalid request method"})
 
-
+@never_cache
 @login_required_custom
 def view_all_trainers_staff(request):
     if request.method == "GET":
@@ -752,6 +759,7 @@ def view_all_trainers_staff(request):
 #         return JsonResponse({"status": "success", "data": data})
 
 #     return JsonResponse({"status": "failed", "message": "Invalid request method"})
+@never_cache
 @login_required_custom
 def view_single_trainer_staff(request, id):
     if request.method == "GET":
@@ -778,7 +786,7 @@ def view_single_trainer_staff(request, id):
         return JsonResponse({"status": "success", "data": data})
 
     return JsonResponse({"status": "failed", "message": "Invalid request method"})
-
+@never_cache
 @login_required_custom
 @csrf_exempt
 def edit_trainer_staff(request, id):
@@ -830,7 +838,7 @@ def edit_trainer_staff(request, id):
 
     return JsonResponse({"status": "failed", "message": "Invalid request method"}, status=405)
 
-
+@never_cache
 @login_required_custom
 @csrf_exempt
 def delete_trainer_staff(request, id):
@@ -841,7 +849,7 @@ def delete_trainer_staff(request, id):
 
     return JsonResponse({"status": "failed", "message": "Invalid request method"}, status=405)
 
-
+@never_cache
 @login_required_custom
 @csrf_exempt
 def add_branch(request):
@@ -860,7 +868,7 @@ def add_branch(request):
 
     return JsonResponse({'status': 'Invalid request method'}, status=405)
         
-
+@never_cache
 @login_required_custom
 def view_branches(request):
     if request.method == 'GET':
@@ -880,7 +888,7 @@ def view_branches(request):
         
         })
     return JsonResponse({'status': 'Invalid request method'}, status=405)
-
+@never_cache
 @login_required_custom
 @csrf_exempt
 def delete_branch(request, id):
@@ -893,7 +901,7 @@ def delete_branch(request, id):
         branch.delete()
         return JsonResponse({'status': 'Branch deleted successfully'})
     return JsonResponse({'status': 'Invalid request method'}, status=405)
-
+@never_cache
 @login_required_custom
 @csrf_exempt
 def edit_branch(request, id):
@@ -932,6 +940,7 @@ def edit_branch(request, id):
 
 
 from django.contrib.auth.models import User
+@never_cache
 @login_required_custom
 @csrf_exempt
 def add_branch_admin(request):
