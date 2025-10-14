@@ -166,7 +166,7 @@ def add_member(request):
     if request.method == 'POST':
         data = request.POST
         branch_id = data.get('branch') 
-        branch = Branch.objects.get(id=branch_id) if branch_id else None
+        branch = Branch.objects.get(id=int(branch_id)) if branch_id else None
         name = data.get('name')
         phone = data.get('phone')
         email = data.get('email')
