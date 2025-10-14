@@ -147,6 +147,10 @@ def admin_login(request):
 
     return response
 
+@csrf_exempt
+def test_cookie(request):
+    print("COOKIES:", request.COOKIES)
+    return JsonResponse({"cookies": request.COOKIES})
 
 
 @csrf_exempt
